@@ -749,7 +749,19 @@ func (g *genDeepCopy) doMap(t *types.Type, sw *generator.SnippetWriter) {
 		// Note: if t.Elem has been an alias "J" of an interface "I" in Go, we will see it
 		// as kind Interface of name "J" here, i.e. generate val.DeepCopyJ(). The golang
 		// parser does not give us the underlying interface name. So we cannot do any better.
-		sw.Do(fmt.Sprintf("(*out)[key] = val.DeepCopy%s()\n", uet.Name.Name), nil)
+		if uet.Name.Name == "interface{}" {
+			sw.Do("(*out)[key], _ = copystructure.Copy(val)\n", nil)
+			t := types.Type{
+				Name: types.Name{
+					Name:    "CopierFunc",
+					Package: "github.com/mitchellh/copystructure",
+					Path:    "github.com/mitchellh/copystructure",
+				},
+			}
+			g.imports.AddType(&t)
+		} else {
+			sw.Do(fmt.Sprintf("(*out)[key] = val.DeepCopy%s()\n", uet.Name.Name), nil)
+		}
 		sw.Do("}\n", nil)
 	case uet.Kind == types.Slice || uet.Kind == types.Map || uet.Kind == types.Pointer:
 		sw.Do("var outVal $.|raw$\n", uet)
